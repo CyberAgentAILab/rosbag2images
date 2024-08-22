@@ -1,12 +1,14 @@
 ## Docker environment for image extraction from ROS1 rosbag
 
+This is a tool to extract images from a ROS1 rosbag without requiring manual setup of the ROS1 environment on the Host OS.  
+
 ## Requriement
 
-Host OS with Docker installed.
+Host OS with Docker, Bash, and Python installed.  
 
 ## Setup
 
-First you need to run setup.sh to build the docker image.
+First you need to run setup.sh to build the docker image.  
 
 ```
 $ bash setup.sh
@@ -23,7 +25,7 @@ $ ./extract.sh <path to rosbag file>
 ### Extract images
 
 ```
-$ ./extract.sh <path to rosbag file> <path to output image directory> <topic name>
+$ ./extract.sh <path to ros1 rosbag file> <path to output image directory> <topic name>
 ```
 
 ## Thanks
