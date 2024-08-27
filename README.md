@@ -4,7 +4,7 @@ This is a tool to extract images from a ROS1 rosbag without requiring manual set
 
 ## Requriement
 
-Host OS with Docker, Bash, and Python installed.  
+Host OS with Docker and Bash installed.  
 
 ## Setup
 
