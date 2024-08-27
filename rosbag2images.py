@@ -38,24 +38,35 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
     bag = rosbag.Bag(args.bag_file, "r")
     bridge = CvBridge()
 
     n_frames = bag.get_message_count(args.image_topic)
-
     messages = bag.read_messages(topics=[args.image_topic])
+    topics = bag.get_type_and_topic_info().topics
+
+    msg_type = topics[args.image_topic].msg_type
+
+    if args.image_topic not in topics:
+        bag.close()
+        print(f"Topic '{args.image_topic}' does not exist in rosbag.")
+        return
+
+    if msg_type != "sensor_msgs/Image":
+        bag.close()
+        print(f"Message type must be 'sensor_msgs/Image'. Actual: '{msg_type}'")
+        return
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
         image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        p = os.path.join(args.output_dir, "{:05}.png".format(i))
+        p = os.path.join(args.output_dir, "{:06}.png".format(i))
         cv2.imwrite(p, image)
 
     bag.close()
-
 
 main()
