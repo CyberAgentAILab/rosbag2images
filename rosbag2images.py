@@ -34,20 +34,22 @@ def image_index_to_path(output_dir, index):
     return os.path.join(output_dir, "{:06}.png".format(index))
 
 
-def extract_and_save_image(messages, output_dir, n_frames):
+def extract_and_save_image(messages, output_dir, n_frames, swaprb):
     bridge = CvBridge()
     for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
         image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if swaprb:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         path = image_index_to_path(output_dir, i)
         cv2.imwrite(path, image)
 
 
-def extract_and_save_compressed_image(messages, output_dir, n_frames):
+def extract_and_save_compressed_image(messages, output_dir, n_frames, swaprb):
     bridge = CvBridge()
     for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
         image = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if swaprb:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         path = image_index_to_path(output_dir, i)
         cv2.imwrite(path, image)
 
@@ -56,7 +58,10 @@ def main():
     parser = argparse.ArgumentParser(description="Extract images from a ROS bag.")
     parser.add_argument("--bag_file", help="Input ROS bag.")
     parser.add_argument("--output_dir", help="Output directory.")
-    parser.add_argument("--image_topic", help="single image topic or list of topics")
+    parser.add_argument("--image_topic", help="Single image topic or list of topics")
+    parser.add_argument(
+        "--swaprb", help="Swap red and blue channel", action="store_true"
+    )
 
     args = parser.parse_args()
 
@@ -88,10 +93,12 @@ def main():
     messages = bag.read_messages(topics=[args.image_topic])
 
     if is_image_type:
-        extract_and_save_image(messages, args.output_dir, n_frames)
+        extract_and_save_image(messages, args.output_dir, n_frames, args.swaprb)
 
     if is_compressed_image_type:
-        extract_and_save_compressed_image(messages, args.output_dir, n_frames)
+        extract_and_save_compressed_image(
+            messages, args.output_dir, n_frames, args.swaprb
+        )
 
     bag.close()
 
