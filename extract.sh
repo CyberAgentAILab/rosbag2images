@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 1 ] && [ "$#" -ne 3 ] ; then
+if [ "$#" -ne 1 ] && [ "$#" -lt 3 ] ; then
     echo "Usage:"
     echo ""
     echo "To list topics, run "
@@ -31,6 +31,21 @@ if [ ! -d $2 ]; then
     mkdir -p $2 && echo "Directory $2 is created."
 fi
 
+cmd="python3 rosbag2images.py --bag_file /bagfile --output_dir /imagedir --image_topic $3"
+
+if [[ $# -gt 3 ]]; then
+    case "$4" in
+    --swaprb)
+      cmd+=" --swaprb"
+      ;;
+    *)
+      echo "Unknown option: $4"
+      exit 1
+      ;;
+    esac
+fi
+
+
 imagedir=$(readlink -f $2)
 
 docker run --rm \
@@ -38,4 +53,4 @@ docker run --rm \
     -v $imagedir:/imagedir \
     -v $(pwd)/rosbag2images.py:/rosbag2images.py \
     rosbag2images \
-    python3 rosbag2images.py --bag_file /bagfile --output_dir /imagedir --image_topic $3
+    $cmd

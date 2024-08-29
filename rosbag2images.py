@@ -30,43 +30,77 @@ from tqdm import tqdm
 description = "Extraction in progress"
 
 
+def image_index_to_path(output_dir, index):
+    return os.path.join(output_dir, "{:06}.png".format(index))
+
+
+def extract_and_save_image(messages, output_dir, n_frames, swaprb):
+    bridge = CvBridge()
+    for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
+        image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        if swaprb:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        path = image_index_to_path(output_dir, i)
+        cv2.imwrite(path, image)
+
+
+def extract_and_save_compressed_image(messages, output_dir, n_frames, swaprb):
+    bridge = CvBridge()
+    for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
+        image = bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        if swaprb:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        path = image_index_to_path(output_dir, i)
+        cv2.imwrite(path, image)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Extract images from a ROS bag.")
     parser.add_argument("--bag_file", help="Input ROS bag.")
     parser.add_argument("--output_dir", help="Output directory.")
-    parser.add_argument("--image_topic", help="single image topic or list of topics")
+    parser.add_argument("--image_topic", help="Single image topic or list of topics")
+    parser.add_argument(
+        "--swaprb", help="Swap red and blue channel", action="store_true"
+    )
 
     args = parser.parse_args()
 
     bag = rosbag.Bag(args.bag_file, "r")
-    bridge = CvBridge()
 
-    n_frames = bag.get_message_count(args.image_topic)
-    messages = bag.read_messages(topics=[args.image_topic])
     topics = bag.get_type_and_topic_info().topics
 
-    msg_type = topics[args.image_topic].msg_type
-
     if args.image_topic not in topics:
-        bag.close()
         print(f"Topic '{args.image_topic}' does not exist in rosbag.")
+        bag.close()
         return
 
-    if msg_type != "sensor_msgs/Image":
+    msg_type = topics[args.image_topic].msg_type
+    is_compressed_image_type = msg_type == "sensor_msgs/CompressedImage"
+    is_image_type = msg_type == "sensor_msgs/Image"
+
+    if (not is_image_type) and (not is_compressed_image_type):
+        print(
+            f"Message type must be either of 'sensor_msgs/Image' or "
+            f"'sensor_msgs/CompressedImage'. Actual: '{msg_type}'"
+        )
         bag.close()
-        print(f"Message type must be 'sensor_msgs/Image'. Actual: '{msg_type}'")
         return
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
-    for i, (_, msg, t) in tqdm(enumerate(messages), total=n_frames, desc=description):
-        image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    n_frames = bag.get_message_count(args.image_topic)
+    messages = bag.read_messages(topics=[args.image_topic])
 
-        p = os.path.join(args.output_dir, "{:06}.png".format(i))
-        cv2.imwrite(p, image)
+    if is_image_type:
+        extract_and_save_image(messages, args.output_dir, n_frames, args.swaprb)
+
+    if is_compressed_image_type:
+        extract_and_save_compressed_image(
+            messages, args.output_dir, n_frames, args.swaprb
+        )
 
     bag.close()
+
 
 main()
